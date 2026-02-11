@@ -1,10 +1,28 @@
-# 自动微分的基础知识#
+### 数学和机器学习术语：
+
+differentiation：微分
+partial derivatives：偏导数
+**autograd**：自动求微分
+gradient-based optimization：梯度优化
+
+[The Fundamentation Of Autograd](https://www.youtube.com/watch?v=M0fX15_-xrY)
+[What is Automatic Differentiation?](https://www.youtube.com/watch?v=wG_nF1awSSY)
+
+铺垫：什么是自动求微分？
+
+微积分中的手动求导数 / 符号微分
+数值微分方法，有限差分法来用导数定义求近似
+问题：表达式增长，计算参数数量大
+
+自动求微分的两张方式：正向求和反向求
 
 
 
-请观看下方[YouTube](https://www.youtube.com/watch?v=M0fX15_-xrY)视频。
+----
 
-PyTorch 的*自动微分*功能是 PyTorch 灵活性的来源之一， 快速构建机器学习项目。它能够快速且 易于计算多个偏导数（也称为 *梯度）* 经过复杂的计算。此操作是基于反向传播的神经网络学习的核心。
+
+
+PyTorch 的自动微分功能是 PyTorch 灵活性的来源之一， 快速构建机器学习项目。它能够快速且 易于计算多个偏导数（也称为 *梯度）* 经过复杂的计算。此操作是基于反向传播的神经网络学习的核心。
 
 自动微分 (autograd) 的强大之处在于它能 *在运行时动态追踪计算过程。* 这意味着，即使模型包含决策分支或循环（其长度在运行时才能确定），计算过程依然能够被正确追踪，从而获得正确的梯度来驱动学习。此外，由于模型是用 Python 构建的，因此相比那些依赖于对结构更为固定的模型进行静态分析来计算梯度的框架，自动微分提供了更大的灵活性。
 

@@ -2,14 +2,7 @@
 
 视频 [03:50](https://www.youtube.com/watch?v=IC0_FRiX-sw&t=230s) 。
 
-首先，导入 pytorch。
-
-```
-import torch
-```
-
-
-我们来看一些基本的张量操作。首先，我们来看几种创建张量的方法：
+首先我们来看一些基本的张量操作。来看几种创建张量的方法：
 
 ```
 z = torch.zeros(5, 3)
@@ -175,7 +168,6 @@ tensor(0.9956)
 
 
 
-
 ----
 
 
@@ -199,12 +191,10 @@ import torch.nn.functional as F  # for the activation function 激活层函数
 上图是 LeNet-5 的示意图，它是最早的卷积神经网络之一，也是深度学习爆发式增长的驱动力之一。它被设计用于读取手写数字的小图像（MNIST 数据集），并正确分类图像中表示的是哪个数字。
 
 Lenet5的结构示意图详解
-1.tuzhong
-
-
+1.图中包括两个卷积层，两个池化层，三个全连接层
+2.灰色方块表示张量经过层后的输出特征图，卷积核大小、输入输出通道数和尺寸大小
 
 以下是其工作原理的简要说明：
-
 - C1 层是一个卷积层，它会扫描输入图像，寻找训练过程中学习到的特征。它输出一个激活图，显示每个学习到的特征在图像中出现的位置。这个“激活图”在 S2 层进行下采样。
 - C3 层是另一个卷积层，这次它扫描 C1 层的激活图，寻找特征 *组合* 。它还会输出一个描述这些特征组合空间位置的激活图，该激活图在 S4 层进行下采样。
 - 最后，末端的全连接层 F5、F6 和 OUTPUT 是一个 *分类器* ，它接收最终的激活图，并将其分类到代表 10 个数字的 10 个箱之一中。
@@ -216,18 +206,23 @@ class LeNet(nn.Module):
 
     def __init__(self):
         super(LeNet, self).__init__()
+        
         # 1 input image channel (black & white), 6 output channels, 5x5 square convolution
+        
         # kernel
         self.conv1 = nn.Conv2d(1, 6, 5)
         self.conv2 = nn.Conv2d(6, 16, 5)
+        
         # an affine operation: y = Wx + b
         self.fc1 = nn.Linear(16 * 5 * 5, 120)  # 5*5 from image dimension
         self.fc2 = nn.Linear(120, 84)
         self.fc3 = nn.Linear(84, 10)
 
     def forward(self, x):
+    
         # Max pooling over a (2, 2) window
         x = F.max_pool2d(F.relu(self.conv1(x)), (2, 2))
+        
         # If the size is a square you can only specify a single number
         x = F.max_pool2d(F.relu(self.conv2(x)), 2)
         x = x.view(-1, self.num_flat_features(x))
@@ -237,23 +232,20 @@ class LeNet(nn.Module):
         return x
 
     def num_flat_features(self, x):
-        size = x.size()[1:]  # all dimensions except the batch dimension
+        size = x.size()[1:]       # all dimensions except the batch dimension
         num_features = 1
         for s in size:
             num_features *= s
         return num_features
 ```
 
-
-
 仔细查看这段代码，你应该能够发现它与上面的图表有一些结构上的相似之处。
 
 这展示了一个典型的 PyTorch 模型的结构：
 
-- 它继承自 `torch.nn.Module` 模块可以嵌套——事实上，甚至 `Conv2d` 和 `Linear` 层类也继承自 torch.nn.Module。 `torch.nn.Module` 。
+- 继承自 `torch.nn.Module` 模块可以嵌套——事实上，甚至 `Conv2d` 和 `Linear` 层类也继承自 `torch.nn.Module` 。
 - 模型将有一个 `__init__()` 函数，它会在其中实例化其层，并加载它可能需要的任何数据工件（例如，NLP 模型可能会加载词汇表）。
 - 模型会包含一个 `forward()` 函数。实际的计算过程就在这里进行：输入信号会依次经过网络层和各种函数，最终生成输出。
-- 除此之外，您可以像构建任何其他 Python 类一样构建您的模型类，添加您需要的任何属性和方法来支持模型的计算。
 
 让我们实例化这个对象，并向它输入一个示例数据。
 
@@ -270,8 +262,6 @@ print('\nRaw output:')
 print(output)
 print(output.shape)
 ```
-
-
 
 ```
 LeNet(
@@ -291,23 +281,185 @@ tensor([[ 0.0898,  0.0318,  0.1485,  0.0301, -0.0085, -0.1135, -0.0296,  0.0164,
 torch.Size([1, 10])
 ```
 
-
-
 以上内容包含几个重要信息：
 
-首先，我们实例化 `LeNet` 类，并打印 `net` `torch.nn.Module` 的子类对象会报告它创建的层及其形状和参数。如果您想了解模型的处理过程，这可以提供一个方便的概览。
+首先，我们实例化 `LeNet` 类，并打印 `net`，`torch.nn.Module` 的子类对象会报告它创建的层及其形状和参数。如果您想了解模型的处理过程，这可以提供一个方便的概览。
 
-下面，我们创建一个虚拟输入，代表一个 32x32 像素、单通道的图像。通常情况下，你会加载一个图像图块并将其转换为这种形状的张量。
+下面，我们创建一个虚拟输入，代表一个 32x32 像素、单通道的图像。通常情况下，你可以加载一个图像图块并将其转换为这种形状的张量。
 
 您可能已经注意到我们的张量多了一个维度—— *批次维度。PyTorch* 模型假定它们处理的是*批次*数据。 例如，一批 16 个图像图块的形状为 `(16, 1, 32, 32)` 由于我们只使用一张图像，因此我们创建一个形状为 `(1, 1, 32, 32)` 批次，数量为 1。
 
 我们像调用函数一样调用模型，请求它进行推理： `net(input)` 的输出表示模型对输入代表特定数字的置信度。（由于该模型实例尚未学习任何内容，我们不应期望在输出中看到任何信号。）观察 `output` 的形状，我们可以看到它也具有批次维度，其大小应始终与输入批次维度匹配。如果我们传入的输入批次包含 16 个实例， `output` 形状将为 `(16, 10)` 。
 
+
+
+----
+
+
+## 从零设计和实现一个卷积神经网络
+
+
+
+![le-net-5 diagram](https://docs.pytorch.org/tutorials/_images/mnist.png)
+
+```
+import torch
+from torch import nn
+
+#定义张量x，它的尺寸是5*1*28*28
+#表示了5个，单通道，28*28的数据
+x = torch.zeros([5,1,28,28])
+
+#定义一个输入通道是1，输出通道是6，卷积核大小是5*5的卷积层
+conv = nn.Conv2d(in channels=1,out channels=6,kernel size=5)
+
+#将x，输入至conv，计算出结果c
+c = conv(x)
+
+#打印结果尺寸                  #程序输出结果
+print(c.shape)               torch.Size([5,6,24,24])
+
+#定义最大池化层
+pool = nn.MaxPool2d(2)
+
+#将卷积层计算得到的特征图c，输入至pool
+s = pool(c)
+
+#输出s的尺寸                  #程序输出结果
+print(s.shape)              torch.Size([5,6,12,12])
+```
+
+
+**使用Pytorch框架完整实现Lenet5网络**
+
+```
+import torch
+from torch.nn import Module
+from torch import nn
+
+# 使用Pytorch，完整实现Lenet5网络
+class Lenet(Module):
+
+    # Lenet5网络结构的定义
+    def__init__(self):
+    
+    super(Lenet5,self).__init__()
+    
+    # 定义Lenet5模型中的结构
+    # 第一个卷积块
+    self.conv1 = nn.Sequential(
+        nn.Conv2d(1,6,5),  # 卷积层
+        nn.ReLU(),         # relu激活函数
+        nn.MaxPool2d(2)    # 最大池化层
+    )
+    # 第二个卷积块
+    self.conv2 = nn.Sequential(
+        nn.Conv2d(6,16,5), # 卷积层
+        nn.ReLU(),         # relu激活函数
+        nn.MaxPool2d(2)    # 最大池化层
+    )
+    
+    # 全连接层1
+    self.fc1 = nn.Sequential(
+        nn.Linear(256,120) # 线性层
+        nn.ReLU            # relu激活函数
+    )
+    # 全连接层2
+    self.fc1 = nn.Sequential(
+        nn.Linear(120,84)  # 线性层
+        nn.ReLU            # relu激活函数
+    )
+    # 全连接层3
+    self.fc1 = nn.Sequential(
+        nn.Linear(84,10)   # 线性层
+    )
+    
+    # 前向传播计算函数，输入张量x
+    def forward(self,x):
+    # 在注释中，标记了张量x经过每一层计算之后变化的尺寸
+    # 最初输入：n*1*28*28    
+    x = self.conv1(x)      # [n,6,12,12]
+    x = self.conv2(x)      # [n,16,4,4]
+    
+    # 在输入至全连接层前
+    # 需要使用view函数，将张量的维度从n*16*4*4展平为n*256
+    x = x.view(-1,256)     # [n,256]
+    x = self.fc1(x)        # [n,120]
+    x = self.fc2(x)        # [n,84]
+    x = self.fc3(x)        # [n,10]
+    return x
+
+```
+
+**使用Lenet5，Pytorch框架，训练“图像分类”模型
+```
+import torch
+from torch import nn
+from torch import optim
+
+from lenet5 import LeNet5
+
+from torchvision import transforms
+from torchvision import datasets
+from torch.utils.data import DataLoader
+
+if __name__ == '__main__':
+    # 图像预处理
+    transform = transforms.Compose([
+        transforms.Grayscale(num_output_channels=1),  # 转换为单通道灰度图
+        transforms.ToTensor()     # 转换为张量
+    ])
+    
+    # 读入并构造数据集
+    train dataset = datasets.ImageFolder(root='./mnist_images/train',
+    transform = transform)
+    print("train_dataset length:",len(train_dataset))
+    
+    # 小批量的数据读入
+    train_loader = DataLoader(train_dataset,batch_size=64,shuffle=True)
+    print("train_loader length:",len(train_loader))
+    
+    # 创建三个关键对象
+    model = LeNet5()        # 前面定义的Lenet5卷积神经网路结构
+    optimizer = optim.Adam(model.parameters())   # 优化器
+    criterion = nn.CrossEntropyLoss()            # 交叉熵损失误差
+    
+        
+    # 进入模型的迭代循环
+    for epoch in range(10):     # 外层循环，表示整个训练数据集的遍历次数
+        # 内层循环使用train_loader，进行小批量的数据读取
+        for batch_idx,(data,label) in enumerate (train_loader):
+        # 每次内层循环，都会进行一次梯度下降算法
+        # 梯度下降算法，包括5个步骤：
+        output = model(data)    # 1.计算神经网路的前向传播结果
+        loss = criterion(output,label)  # 2.计算output和label之间的loss
+        loss.backward()         # 3.使用backward计算梯度
+        optimizer.step()        # 4.使用optimizer.step更新参数
+        optimizer.zero_grad()   # 5.将梯度清零
+        
+        # 每迭代100个小批量，就打印一次模型的损失，观察训练的过程
+        if batch_idx % 100 == 0;
+            print(f"Epoch {epoch+1}/10"
+                  f"| Batch {batch_idx} / {len(train_loader)}"
+                  f"| Loss: {loss.item():.4f}")
+    
+    torch.save(model.state_dict(),'mnist_lenet5.pth')   # 保存模型
+```
+
+完成模型训练后，再进行模型的测试
+
+
+
+
+----
+
+
+
 ## 数据集和数据加载器#
 
-请跟随视频从 [14:00](https://www.youtube.com/watch?v=IC0_FRiX-sw&t=840s) 开始观看。
+视频 [14:00](https://www.youtube.com/watch?v=IC0_FRiX-sw&t=840s) 
 
-下面，我们将演示如何使用 TorchVision 提供的可直接下载的开放获取数据集之一，如何转换图像以供模型使用，以及如何使用 DataLoader 将批量数据提供给模型。
+下面演示如何使用 TorchVision 提供的可直接下载的开放获取数据集之一，如何转换图像以供模型使用，以及如何使用 DataLoader 将批量数据提供给模型。
 
 我们首先需要做的是将输入的图像转换为 PyTorch 张量。
 
@@ -323,13 +475,11 @@ transform = transforms.Compose(
      transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2470, 0.2435, 0.2616))])
 ```
 
-
-
 这里，我们为输入数据指定了两种转换：
 
 - `transforms.ToTensor()` 将 Pillow 加载的图像转换为 PyTorch 张量。
 
-- `transforms.Normalize()` ` 函数会调整张量的值，使其均值为零，标准差为 1.0。大多数激活函数在 x = 0 附近梯度最强，因此将数据中心化到该位置可以加快学习速度。传递给 `transform` 函数的值是数据集中图像 RGB 值的均值（第一个元组）和标准差（第二个元组）。您可以通过运行以下几行代码自行计算这些值：
+- `transforms.Normalize()` 函数会调整张量的值，使其均值为零，标准差为 1.0。大多数激活函数在 x = 0 附近梯度最强，因此将数据中心化到该位置可以加快学习速度。传递给 `transform` 函数的值是数据集中图像 RGB 值的均值（第一个元组）和标准差（第二个元组）。可以通过运行以下几行代码自行计算这些值：
 
   ```
   from torch.utils.data import ConcatDataset
@@ -342,22 +492,17 @@ transform = transforms.Compose(
   x = torch.stack([sample[0] for sample in ConcatDataset([trainset])])
   
   # get the mean of each channel
-  mean = torch.mean(x, dim=(0,2,3)) # tensor([0.4914, 0.4822, 0.4465])
-  std = torch.std(x, dim=(0,2,3)) # tensor([0.2470, 0.2435, 0.2616])
+  mean = torch.mean(x, dim=(0,2,3))     # tensor([0.4914, 0.4822, 0.4465])
+  std = torch.std(x, dim=(0,2,3))       # tensor([0.2470, 0.2435, 0.2616])
   ```
-
-  
 
 还有许多其他变换方式可供选择，包括裁剪、居中、旋转和反射。
 
 接下来，我们将创建一个 CIFAR10 数据集实例。这是一个包含 32x32 像素彩色图像块的数据集，代表 10 类对象：6 类动物（鸟、猫、鹿、狗、青蛙、马）和 4 类车辆（飞机、汽车、轮船、卡车）。
-
 ```
 trainset = torchvision.datasets.CIFAR10(root='./data', train=True,
                                         download=True, transform=transform)
 ```
-
-
 
 ```
   0%|          | 0.00/170M [00:00<?, ?B/s]
@@ -380,13 +525,8 @@ trainset = torchvision.datasets.CIFAR10(root='./data', train=True,
 100%|██████████| 170M/170M [00:01<00:00, 104MB/s]
 ```
 
+这是一个在 PyTorch 中创建数据集对象的示例。可下载的数据集（例如上文提到的 CIFAR-10）是以下类别的子类： `torch.utils.data.Dataset` 中的 `Dataset` 类包括 TorchVision、Torchtext 和 TorchAudio 中的可下载数据集，以及诸如 `torchvision.datasets.ImageFolder` 之类的实用数据集类，它可以读取一个包含已标注图像的文件夹。您还可以创建自己的 `Dataset` 子类。
 
-
-笔记
-
-运行上述单元格时，数据集可能需要一些时间才能下载。
-
-这是一个在 PyTorch 中创建数据集对象的示例。可下载 数据集（例如上文提到的 CIFAR-10）是以下类别的子类： `torch.utils.data.Dataset` 中的 `Dataset` 类包括 TorchVision、Torchtext 和 TorchAudio 中的可下载数据集，以及诸如 `torchvision.datasets.ImageFolder` 之类的实用数据集类，它可以读取一个包含已标注图像的文件夹。您还可以创建自己的 `Dataset` 子类。
 
 当我们实例化数据集时，需要告诉它一些信息：
 
@@ -402,9 +542,7 @@ trainloader = torch.utils.data.DataLoader(trainset, batch_size=4,
                                           shuffle=True, num_workers=2)
 ```
 
-
-
-`Dataset` 子类封装了对数据的访问，并针对其提供的数据类型进行了专门化。DataLoader 对数据本身*一无所知* ，它只是根据您指定的参数 `DataLoader` 将 Dataset 提供的输入张量组织成批次。
+`Dataset` 子类封装了对数据的访问，并针对其提供的数据类型进行了专门化。DataLoader 对数据本身*一无所知* ，它只是根据指定的参数 `DataLoader` 将 Dataset 提供的输入张量组织成批次。
 
 在上面的示例中，我们要求 `DataLoader` 从 `trainset` 提供 4 张图像的批次，并随机化它们的顺序（ `shuffle=True` ），我们还告诉它启动两个工作进程从磁盘加载数据。
 
@@ -432,23 +570,26 @@ imshow(torchvision.utils.make_grid(images))
 # print labels
 print(' '.join('%5s' % classes[labels[j]] for j in range(4)))
 ```
-
-
-
-![introyt1 tutorial](https://docs.pytorch.org/tutorials/_images/sphx_glr_introyt1_tutorial_001.png)
-
+![[Pasted image 20260211200151.png]]
 ```
 Clipping input data to the valid range for imshow with RGB data ([0..1] for floats or [0..255] for integers). Got range [-0.49473685..1.5632443].
- ship   car horse  ship
+
+ ship   car   horse    ship
 ```
-
-
 
 运行上述单元格应该会显示四张图片，以及每张图片的正确标签。
 
+
+
+
+----
+
+
+
+
 ## 训练你的 PyTorch 模型#
 
-请跟随视频从 [17:10](https://www.youtube.com/watch?v=IC0_FRiX-sw&t=1030s) 开始观看。
+视频 [17:10](https://www.youtube.com/watch?v=IC0_FRiX-sw&t=1030s)
 
 让我们把所有要素整合起来，训练一个模型：
 
@@ -467,8 +608,6 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 ```
-
-
 
 首先，我们需要训练集和测试集。如果您尚未下载数据集，请运行下面的单元格以确保数据集已下载。（可能需要一分钟。）
 
@@ -490,8 +629,6 @@ testloader = torch.utils.data.DataLoader(testset, batch_size=4,
 classes = ('plane', 'car', 'bird', 'cat',
            'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
 ```
-
-
 
 我们将对 `DataLoader` 的输出进行检查：
 
@@ -517,18 +654,13 @@ imshow(torchvision.utils.make_grid(images))
 # print labels
 print(' '.join('%5s' % classes[labels[j]] for j in range(4)))
 ```
+![[Pasted image 20260211200403.png]]
+`cat   cat  deer  frog`
 
 
 
-![introyt1 tutorial](https://docs.pytorch.org/tutorials/_images/sphx_glr_introyt1_tutorial_002.png)
 
-```
-cat   cat  deer  frog
-```
-
-
-
-这就是我们将要训练的模型。如果它看起来很眼熟，那是因为它是 LeNet 的一个变体——LeNet 在本视频前面已经讨论过——专门针对三色图像进行了调整。
+下面就是我们**将要训练的模型**。如果它看起来很眼熟，那是因为它是 LeNet 的一个变体——LeNet前面已经讨论过——专门针对三色图像进行了调整。
 
 ```
 class Net(nn.Module):
@@ -550,10 +682,8 @@ class Net(nn.Module):
         x = self.fc3(x)
         return x
 
-
 net = Net()
 ```
-
 
 
 最后我们需要的是损失函数和优化器：
@@ -563,13 +693,11 @@ criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
 ```
 
+损失函数衡量的是模型预测结果与理想输出之间的差距。交叉熵损失是像我们这样的分类模型常用的损失函数。
 
+**优化器**是驱动学习的关键。这里我们创建了一个实现*随机梯度下降的优化器，随机梯度下降*是一种比较直接的优化算法。除了算法的参数，例如学习率（ `lr` ）和动量之外，我们还传入了`net.parameters()` ，它是模型中所有学习权重的集合——优化器会调整这些权重。
 
-如本视频前面所述，损失函数衡量的是模型预测结果与理想输出之间的差距。交叉熵损失是像我们这样的分类模型常用的损失函数。
-
-**优化器**是驱动学习的关键。这里我们创建了一个实现*随机梯度下降的优化器，随机梯度下降*是一种比较直接的优化算法。除了算法的参数，例如学习率（ `lr` ）和动量之外，我们还传入了…… `net.parameters()` ，它是模型中所有学习权重的集合——优化器会调整这些权重。
-
-最后，所有这些步骤都整合到训练循环中。请运行此单元格，执行可能需要几分钟时间：
+最后，所有这些步骤都整合到训练循环中。运行此单元格，执行可能需要几分钟时间：
 
 ```
 for epoch in range(2):  # loop over the dataset multiple times
@@ -598,27 +726,7 @@ for epoch in range(2):  # loop over the dataset multiple times
 print('Finished Training')
 ```
 
-
-
-```
-[1,  2000] loss: 2.195
-[1,  4000] loss: 1.879
-[1,  6000] loss: 1.656
-[1,  8000] loss: 1.576
-[1, 10000] loss: 1.517
-[1, 12000] loss: 1.461
-[2,  2000] loss: 1.415
-[2,  4000] loss: 1.368
-[2,  6000] loss: 1.334
-[2,  8000] loss: 1.327
-[2, 10000] loss: 1.318
-[2, 12000] loss: 1.261
-Finished Training
-```
-
-
-
-这里，我们只进行了 **2 个训练周期** （第 1 行）——也就是说，两个 遍历训练数据集。每次遍历都有一个内部循环，该内部循环 **遍历训练数据** （第 4 行），提供一批批转换后的输入图像及其正确的标签。
+这里，我们只进行了 **2 个训练周期** （第 1 行）——两次循环 遍历训练数据集。每次遍历都有一个内部循环，该内部循环 **遍历训练数据** （第 4 行），提供一批批转换后的输入图像及其正确的标签。
 
 **将梯度归零** （第 9 行）是一个重要的步骤。梯度是在一个批次内累积的；如果我们不为每个批次重置梯度，梯度就会持续累积，从而导致梯度值不正确，使学习无法进行。
 
@@ -628,9 +736,7 @@ Finished Training
 
 在第 15 行，优化器执行一个学习步骤——它使用 `backward()` 调用中的梯度来调整学习权重，使其朝着它认为可以减少损失的方向移动。
 
-循环的其余部分对训练轮数、已完成的训练实例数以及训练循环中收集到的损失进行一些简单的报告。
-
-**运行上面的单元格后，** 您应该会看到类似这样的内容：
+**运行上面的单元格后，** 应该会看到类似这样的内容：
 
 ```
 [1,  2000] loss: 2.235
@@ -648,11 +754,9 @@ Finished Training
 Finished Training
 ```
 
-
-
 请注意，损失是单调递减的，这表明我们的模型在训练数据集上的性能正在不断提高。
 
-最后一步，我们应该检查模型是否真的在运行。 这指的是*模型进行通用*学习，而不仅仅是“记忆”数据集。这种情况称为 **过拟合，** 通常表明数据集太小（样本不足以进行通用学习），或者模型的学习参数过多，无法正确建模数据集。
+最后一步，我们应该检查模型是否真的在运行。 这指的是模型进行**通用学习**，而不仅仅是“记忆”数据集。这种情况称为 **过拟合，** 通常表明数据集太小（样本不足以进行通用学习），或者模型的学习参数过多，无法正确建模数据集。
 
 这就是数据集被分成训练集和测试集的原因——为了测试模型的通用性，我们要求它对未训练过的数据进行预测：
 
@@ -671,12 +775,8 @@ print('Accuracy of the network on the 10000 test images: %d %%' % (
     100 * correct / total))
 ```
 
-
-
 ```
 Accuracy of the network on the 10000 test images: 54 %
 ```
 
-
-
-如果你仔细阅读了前面的步骤，你会发现模型目前的准确率大约为 50%。这虽然算不上最先进的模型，但远高于随机输出预期的 10% 准确率。这表明模型确实进行了一些通用学习。
+模型目前的准确率大约为 50%。这虽然算不上最先进的模型，但远高于随机输出预期的 10% 准确率。这表明模型确实进行了一些通用学习。
