@@ -20,7 +20,7 @@ dog1 = Dog()  # dog1 是 Dog 类的一个对象（实例）
 
 ### 2.1 作用
 
-`__init__`是类的**构造方法**，在创建对象时自动调用，用来初始化对象的属性。
+`__init__`是类的**构造方法**，在创建对象时自动调用，用来**初始化对象的属性**。
 
 ### 2.2 语法
 
@@ -42,11 +42,12 @@ print(dog1.name)        # 输出 Buddy
 
 ---
 
-## 3️⃣ 成员对象（属性）与成员方法
+## 3️⃣ 成员属性与成员方法
 
-### 3.1 成员对象（属性）
+### 3.1 成员属性
 
 - 在 `__init__`中用 `self.xxx = ...`定义的变量，是**实例属性**，每个对象独立拥有。
+  也就是说name是类通用的一个属性，而每个对象都有自己的这个独立name属性
     
 
 ```
@@ -58,7 +59,6 @@ class Dog:
 ### 3.2 成员方法
 
 - 定义在类中的函数，第一个参数必须是 `self`，表示当前对象。
-    
 
 ```
 class Dog:
@@ -69,18 +69,19 @@ class Dog:
 ### 3.3 方法调用
 
 ```
-dog1 = Dog("Buddy")
-dog1.bark()  # 输出 Buddy says woof!
+dog1 = Dog("Buddy")  # 基于类创建对象
+dog1.bark()  # 调用成员方法
+# 输出 Buddy says woof!
 ```
 
 - 调用时不需要传 `self`，Python 会自动把 `dog1`作为 `self`传入。
-    
+
 
 ---
 
 ## 4️⃣ 继承与 `super()`
 
-### 4.1 继承语法
+### 4.1 直接继承
 
 ```
 class Animal:
@@ -94,31 +95,18 @@ class Dog(Animal):  # Dog 继承 Animal
 ### 4.2 调用父类构造方法
 
 如果子类有自己的 `__init__`，并且想保留父类的初始化逻辑，需要用 `super()`：
-
-#### 旧式写法（Python 2 风格，Python 3 也兼容）：
-
-```
-class Dog(Animal):
-    def __init__(self, name, breed):
-        super(Dog, self).__init__(name)  # 第一个参数是子类名，第二个是 self
-        self.breed = breed
-```
-
 #### 新式写法（推荐，Python 3）：
 
 ```
 class Dog(Animal):
     def __init__(self, name, breed):
-        super().__init__(name)  # 不需要传子类名和 self
+        super().__init__(name)  # 调用init中父类对name的构造方法，breed额外自己写
         self.breed = breed
 ```
 
-**为什么旧式写法有两个参数？**​
+ 在 Python 3 中，`super()`默认就是 `super(CurrentClass, self)`，所以可以省略参数。
 
-- `super(LeNet, self)`返回一个代理对象，它会按照方法解析顺序（MRO）找到 `LeNet`的下一个类（即 `nn.Module`），然后把 `self`传给它的方法。
-    
-- 在 Python 3 中，`super()`默认就是 `super(CurrentClass, self)`，所以可以省略参数。
-    
+对于`__init__`方法继承：name是传给父类`__init__`方法的参数，`super()`返回**父类**代理对象，`super().__init__(name)`用于对成员的属性进行继承初始化
 
 ---
 
@@ -206,32 +194,57 @@ make_it_quack(person)  # I'm quacking like a duck!
 
 
 
-# PyTorch 框架中的语法解析
+# Lenet-5网络，PyTorch 框架中的语法解析
 
 PyTorch 中定义神经网络时，通常会继承 `nn.Module`，这就是典型的 **面向对象继承与封装**
 
 ```
-import torch.nn as nn
+class LeNet(nn.Module):
 
-class LeNet(nn.Module):           # 1. 继承 nn.Module
-    def __init__(self):            # 2. 构造方法
-        super(LeNet, self).__init__()  # 调用父类 nn.Module 的构造方法
-        self.conv1 = nn.Conv2d(1, 6, kernel_size=5)
-        self.conv2 = nn.Conv2d(6, 16, kernel_size=5)
-        self.fc1 = nn.Linear(16 * 4 * 4, 120)
+    def __init__(self):
+        super().__init__()
+```
+
+> `nn.Module.__init__`实际上做了什么：
+> 初始化模块的内部状态、设置参数管理、注册子模块
+> 这些都不需要用户传递额外参数
+> 
+> 所以 `super().__init__()`后面空括号是完全正确的，因为 nn.Module的构造函数不需要用户参数。
+
+```
+        # 1 input image channel (black & white), 6 output channels, 5x5 square convolution
+        
+        # kernel
+        self.conv1 = nn.Conv2d(1, 6, 5)
+        self.conv2 = nn.Conv2d(6, 16, 5)
+        
+        # an affine operation: y = Wx + b  仿射算子
+        self.fc1 = nn.Linear(16 * 5 * 5, 120)  # 5*5 from image dimension
         self.fc2 = nn.Linear(120, 84)
         self.fc3 = nn.Linear(84, 10)
 
-    def forward(self, x):          # 3. 前向传播方法
-        x = nn.functional.relu(self.conv1(x))
-        x = nn.functional.max_pool2d(x, 2)
-        x = nn.functional.relu(self.conv2(x))
-        x = nn.functional.max_pool2d(x, 2)
-        x = x.view(-1, 16 * 4 * 4)
-        x = nn.functional.relu(self.fc1(x))
-        x = nn.functional.relu(self.fc2(x))
+    def forward(self, x):
+    
+        # Max pooling over a (2, 2) window
+        # import torch.nn.functional as F (for the activation function)
+        
+        x = F.max_pool2d(F.relu(self.conv1(x)), (2, 2))
+        # If the size is a square you can only specify a single number
+        x = F.max_pool2d(F.relu(self.conv2(x)), 2)
+        
+        x = x.view(-1, self.num_flat_features(x))
+        
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
         x = self.fc3(x)
         return x
+
+    def num_flat_features(self, x):
+        size = x.size()[1:]      # all dimensions except the batch dimension
+        num_features = 1
+        for s in size:
+            num_features *= s
+        return num_features
 ```
 
 ---
@@ -246,14 +259,13 @@ class LeNet(nn.Module):           # 1. 继承 nn.Module
 |`self.conv1 = ...`|**封装**​|将卷积层作为对象的状态（属性）保存。|
 |`def forward(self, x):`|**方法重写**​|`nn.Module`要求子类实现 `forward`方法，这是多态的体现——不同网络有不同的前向逻辑。|
 |`x = self.conv1(x)`|**方法调用**​|调用 `nn.Conv2d`对象的 `__call__`方法（实际执行 `forward`）。|
-
+ 
 
 ```
 model = LeNet()          # 创建实例
 output = model(input)    # 调用 forward（实际是 model.__call__ 会调用 forward）
 ```
 
-- `model(input)`能直接运行，是因为 `nn.Module`实现了 `__call__`方法，它内部调用了 `forward`。
-    
+ `model(input)`能直接运行，是因为 `nn.Module`实现了 `__call__`方法，它内部调用了 `forward`。
 
 
